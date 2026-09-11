@@ -1,0 +1,6 @@
+{
+  "name": "AI Video Generator",
+  "description": "Self-hosted AI image-to-video generation platform with custom inference pipeline, queue management, and real-time video processing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
