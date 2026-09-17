@@ -133,36 +133,40 @@ export class VideoEncoder {
     const isForwardFlight = actionType === 'flight_forward' || actionType === 'speed_rush';
     let needsMotionBlur = true;
 
-    if (isForwardFlight) {
-      // High-speed forward acceleration into the depth of the frame
-      const zoomDelta = Math.min(0.75, 0.40 * speedMult);
-      const maxZoom = (1.0 + zoomDelta).toFixed(3);
-      zoompanFilter = `zoompan=z='min(1.0 + pow(on/${totalFrames}, 1.25)*${zoomDelta.toFixed(3)}, ${maxZoom})':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${totalFrames}:s=${w}x${h}:fps=${options.fps}`;
-    } else if (cameraMotion === 'slow push-in' || cameraMotion === 'dolly' || actionType === 'dolly_zoom') {
-      // Smooth linear push-in
-      const zoomDelta = Math.min(0.50, 0.25 * speedMult);
-      const maxZoom = (1.0 + zoomDelta).toFixed(3);
-      zoompanFilter = `zoompan=z='min(1.0 + (on/${totalFrames})*${zoomDelta.toFixed(3)}, ${maxZoom})':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${totalFrames}:s=${w}x${h}:fps=${options.fps}`;
-    } else if (cameraMotion === 'slow pull-out') {
-      // Smooth continuous reveal pulling backward
-      const zoomDelta = Math.min(0.40, 0.25 * speedMult);
-      const startZoom = (1.0 + zoomDelta).toFixed(3);
-      zoompanFilter = `zoompan=z='max(1.0, ${startZoom} - (on/${totalFrames})*${zoomDelta.toFixed(3)})':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${totalFrames}:s=${w}x${h}:fps=${options.fps}`;
+    // Prioritize specific user-selected camera motion over generic flight tag if explicitly chosen
+    if (cameraMotion === 'tracking shot') {
+      // Wide panoramic tracking shot sweeping across the scene
+      zoompanFilter = `zoompan=z=1.24:x='pow(on/${totalFrames}, 1.05) * (iw - iw/zoom)':y='(ih - ih/zoom)/2':d=${totalFrames}:s=${w}x${h}:fps=${options.fps}`;
     } else if (cameraMotion === 'pan left' || actionType === 'pan_left') {
       // Smooth cinematic glide from right to left
-      zoompanFilter = `zoompan=z=1.18:x='(1.0 - on/${totalFrames}) * (iw - iw/zoom)':y='(ih - ih/zoom)/2':d=${totalFrames}:s=${w}x${h}:fps=${options.fps}`;
+      zoompanFilter = `zoompan=z=1.22:x='(1.0 - on/${totalFrames}) * (iw - iw/zoom)':y='(ih - ih/zoom)/2':d=${totalFrames}:s=${w}x${h}:fps=${options.fps}`;
     } else if (cameraMotion === 'pan right' || actionType === 'pan_right') {
-      // Smooth cinematic glide from left to right
-      zoompanFilter = `zoompan=z=1.18:x='(on/${totalFrames}) * (iw - iw/zoom)':y='(ih - ih/zoom)/2':d=${totalFrames}:s=${w}x${h}:fps=${options.fps}`;
+      // Smooth cinematic glide from left to right across horizon
+      zoompanFilter = `zoompan=z=1.22:x='(on/${totalFrames}) * (iw - iw/zoom)':y='(ih - ih/zoom)/2':d=${totalFrames}:s=${w}x${h}:fps=${options.fps}`;
+    } else if (cameraMotion === 'orbit' || cameraMotion === 'cinematic camera movement' || actionType === 'orbit') {
+      // Dynamic arc trajectory sweeping horizontally with vertical parabolic curve
+      zoompanFilter = `zoompan=z='1.16 + 0.09 * (on/${totalFrames})':x='(on/${totalFrames}) * (iw - iw/zoom)':y='(ih - ih/zoom)/2 + (ih * 0.04) * sin(PI * on / ${totalFrames})':d=${totalFrames}:s=${w}x${h}:fps=${options.fps}`;
     } else if (cameraMotion === 'tilt up' || actionType === 'tilt_up') {
       // Smooth vertical crane rise
-      zoompanFilter = `zoompan=z=1.18:x='(iw - iw/zoom)/2':y='(1.0 - on/${totalFrames}) * (ih - ih/zoom)':d=${totalFrames}:s=${w}x${h}:fps=${options.fps}`;
+      zoompanFilter = `zoompan=z=1.22:x='(iw - iw/zoom)/2':y='(1.0 - on/${totalFrames}) * (ih - ih/zoom)':d=${totalFrames}:s=${w}x${h}:fps=${options.fps}`;
     } else if (cameraMotion === 'tilt down' || actionType === 'tilt_down') {
       // Smooth vertical crane descent
-      zoompanFilter = `zoompan=z=1.18:x='(iw - iw/zoom)/2':y='(on/${totalFrames}) * (ih - ih/zoom)':d=${totalFrames}:s=${w}x${h}:fps=${options.fps}`;
-    } else if (cameraMotion === 'orbit' || cameraMotion === 'tracking shot' || cameraMotion === 'cinematic camera movement' || actionType === 'orbit') {
-      // Single smooth arc curve along the panoramic axis (no oscillating back and forth!)
-      zoompanFilter = `zoompan=z='1.12 + 0.08 * (on/${totalFrames})':x='(on/${totalFrames}) * (iw - iw/zoom)':y='(ih - ih/zoom)/2 + (ih * 0.025) * sin(PI * on / ${totalFrames})':d=${totalFrames}:s=${w}x${h}:fps=${options.fps}`;
+      zoompanFilter = `zoompan=z=1.22:x='(iw - iw/zoom)/2':y='(on/${totalFrames}) * (ih - ih/zoom)':d=${totalFrames}:s=${w}x${h}:fps=${options.fps}`;
+    } else if (isForwardFlight) {
+      // Dynamic forward flight trajectory: translates along flight path while surging forward
+      const zoomDelta = Math.min(0.55, 0.35 * speedMult);
+      const maxZoom = (1.10 + zoomDelta).toFixed(3);
+      zoompanFilter = `zoompan=z='min(1.10 + pow(on/${totalFrames}, 1.15)*${zoomDelta.toFixed(3)}, ${maxZoom})':x='pow(on/${totalFrames}, 1.12) * (iw - iw/zoom)':y='(ih - ih/zoom)/2 - (ih * 0.05) * sin(PI * on / ${totalFrames})':d=${totalFrames}:s=${w}x${h}:fps=${options.fps}`;
+    } else if (cameraMotion === 'slow push-in' || cameraMotion === 'dolly' || actionType === 'dolly_zoom') {
+      // Smooth linear push-in with forward camera drift
+      const zoomDelta = Math.min(0.45, 0.25 * speedMult);
+      const maxZoom = (1.05 + zoomDelta).toFixed(3);
+      zoompanFilter = `zoompan=z='min(1.05 + (on/${totalFrames})*${zoomDelta.toFixed(3)}, ${maxZoom})':x='(iw/2 - iw/zoom/2) + (iw * 0.05) * (on/${totalFrames})':y='(ih/2 - ih/zoom/2) - (ih * 0.03) * (on/${totalFrames})':d=${totalFrames}:s=${w}x${h}:fps=${options.fps}`;
+    } else if (cameraMotion === 'slow pull-out') {
+      // Smooth continuous reveal pulling backward with drift
+      const zoomDelta = Math.min(0.40, 0.25 * speedMult);
+      const startZoom = (1.05 + zoomDelta).toFixed(3);
+      zoompanFilter = `zoompan=z='max(1.05, ${startZoom} - (on/${totalFrames})*${zoomDelta.toFixed(3)})':x='(iw/2 - iw/zoom/2) - (iw * 0.05) * (on/${totalFrames})':y='(ih/2 - ih/zoom/2)':d=${totalFrames}:s=${w}x${h}:fps=${options.fps}`;
     } else if (cameraMotion === 'handheld') {
       // Organic Steadicam breathing motion with long period (approx 4 seconds) to avoid jitter
       zoompanFilter = `zoompan=z='1.08 + 0.016 * sin(2*PI*on/(${options.fps}*3.8))':x='(iw/2 - iw/zoom/2) + (iw * 0.014) * sin(2*PI*on/(${options.fps}*4.2))':y='(ih/2 - ih/zoom/2) + (ih * 0.010) * cos(2*PI*on/(${options.fps}*3.6))':d=${totalFrames}:s=${w}x${h}:fps=${options.fps}`;
@@ -175,8 +179,8 @@ export class VideoEncoder {
       zoompanFilter = `zoompan=z='1.04 + 0.020 * sin(2*PI*on/(${options.fps}*3.2))':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${totalFrames}:s=${w}x${h}:fps=${options.fps}`;
       needsMotionBlur = false;
     } else {
-      // Subtle micro-drift so frame remains organic
-      zoompanFilter = `zoompan=z='1.03 + 0.012 * sin(2*PI*on/(${options.fps}*4.5))':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${totalFrames}:s=${w}x${h}:fps=${options.fps}`;
+      // Dynamic panoramic gentle pan across frame
+      zoompanFilter = `zoompan=z=1.14:x='(on/${totalFrames}) * (iw - iw/zoom)':y='(ih - ih/zoom)/2':d=${totalFrames}:s=${w}x${h}:fps=${options.fps}`;
       needsMotionBlur = false;
     }
 

@@ -137,23 +137,28 @@ export class PromptProcessor {
     }
 
     // 2. Camera motion selection & harmonizing
+    // 2. Camera Motion Conditioning:
+    // Respect user-selected camera motion unless left at default 'static'
     let cameraMotion = options.camera_motion || 'static';
 
-    // If prompt explicitly calls for flight forward or fast motion, prioritize dynamic forward camera trajectory
-    if (actionType === 'flight_forward') {
-      cameraMotion = 'slow push-in';
-    } else if (actionType === 'pan_left' && cameraMotion === 'static') {
-      cameraMotion = 'pan left';
-    } else if (actionType === 'pan_right' && cameraMotion === 'static') {
-      cameraMotion = 'pan right';
-    } else if (actionType === 'tilt_up' && cameraMotion === 'static') {
-      cameraMotion = 'tilt up';
-    } else if (actionType === 'tilt_down' && cameraMotion === 'static') {
-      cameraMotion = 'tilt down';
-    } else if (actionType === 'orbit' && cameraMotion === 'static') {
-      cameraMotion = 'orbit';
-    } else if (actionType === 'dolly_zoom' && cameraMotion === 'static') {
-      cameraMotion = 'dolly';
+    if (cameraMotion === 'static') {
+      if (actionType === 'flight_forward') {
+        cameraMotion = 'tracking shot';
+      } else if (actionType === 'speed_rush') {
+        cameraMotion = 'tracking shot';
+      } else if (actionType === 'pan_left') {
+        cameraMotion = 'pan left';
+      } else if (actionType === 'pan_right') {
+        cameraMotion = 'pan right';
+      } else if (actionType === 'tilt_up') {
+        cameraMotion = 'tilt up';
+      } else if (actionType === 'tilt_down') {
+        cameraMotion = 'tilt down';
+      } else if (actionType === 'orbit') {
+        cameraMotion = 'orbit';
+      } else if (actionType === 'dolly_zoom') {
+        cameraMotion = 'dolly';
+      }
     }
 
     // 3. Motion intensity
