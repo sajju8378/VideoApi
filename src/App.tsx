@@ -21,7 +21,9 @@ import {
   HistoryItem,
   CameraMotion,
 } from './types';
-import { safeFetchJson, resolveApiUrl } from './lib/api';
+import { safeFetchJson, resolveApiUrl, getClientCapabilities } from './lib/api';
+import { generateClientVideo } from './lib/clientMotionGenerator';
+import { getSavedLocalHistory, saveLocalHistory, deleteLocalHistoryItem } from './lib/localHistory';
 
 export default function App() {
   // System & Capabilities
@@ -83,16 +85,103 @@ export default function App() {
       const data = await safeFetchJson('/api/v1/system/capabilities');
       setCapabilities(data);
     } catch {
-      // Ignore
+      // In static / client-mode (GitHub Pages or disconnected backend), provide zero-install capabilities
+      setCapabilities(getClientCapabilities());
     }
   };
 
   const fetchHistory = async () => {
+    const local = getSavedLocalHistory();
     try {
       const data = await safeFetchJson<{ generations: HistoryItem[] }>('/api/v1/generations');
-      setHistoryItems(data.generations || []);
+      const combined = [...(data.generations || []), ...local];
+      const unique = Array.from(new Map(combined.map((item) => [item.id, item])).values());
+      setHistoryItems(unique);
     } catch {
-      // Ignore
+      setHistoryItems(local);
+    }
+  };
+
+  // Client-Side Neural Motion Generator
+  const executeClientGeneration = async (
+    imgUrl: string,
+    imgId: string,
+    targetSettings: typeof settings,
+    targetPrompt: string
+  ) => {
+    const clientJobId = 'client_' + Math.random().toString(36).substring(2, 9);
+    const initialJob: ActiveJob = {
+      job_id: clientJobId,
+      status: 'generating',
+      progress: 5,
+      stage: 'conditioning_validation',
+      message: 'Synthesizing neural motion trajectory in browser memory...',
+    };
+    setActiveJob(initialJob);
+
+    try {
+      const result = await generateClientVideo(imgUrl, targetSettings, (progress, stage, message) => {
+        setActiveJob((prev) => {
+          if (!prev || prev.job_id !== clientJobId) return prev;
+          return {
+            ...prev,
+            status: 'generating',
+            progress,
+            stage,
+            message,
+          };
+        });
+      });
+
+      const completedJob: ActiveJob = {
+        job_id: clientJobId,
+        status: 'completed',
+        progress: 100,
+        stage: 'completed',
+        message: 'Render finished',
+        output: {
+          video_url: result.videoUrl,
+          thumbnail_url: result.thumbnailUrl,
+          duration: targetSettings.duration,
+          fps: targetSettings.fps,
+          width: targetSettings.aspect_ratio === '9:16' ? 720 : 1280,
+          height: targetSettings.aspect_ratio === '9:16' ? 1280 : 720,
+          aspect_ratio: targetSettings.aspect_ratio,
+          file_size_bytes: result.fileSizeBytes,
+        },
+      };
+      setActiveJob(completedJob);
+
+      const historyItem: HistoryItem = {
+        id: clientJobId,
+        status: 'completed',
+        progress: 100,
+        stage: 'completed',
+        created_at: new Date().toISOString(),
+        completed_at: new Date().toISOString(),
+        prompt: targetPrompt,
+        resolution: targetSettings.resolution,
+        aspect_ratio: targetSettings.aspect_ratio,
+        duration: targetSettings.duration,
+        fps: targetSettings.fps,
+        seed: targetSettings.seed ?? 42,
+        camera_motion: targetSettings.camera_motion,
+        motion_strength: targetSettings.motion_strength,
+        input_image_url: imgUrl,
+        input_image_id: imgId,
+        video_url: result.videoUrl,
+        thumbnail_url: result.thumbnailUrl,
+        file_size_bytes: result.fileSizeBytes,
+      };
+      saveLocalHistory(historyItem);
+      setHistoryItems((prev) => [historyItem, ...prev.filter((x) => x.id !== clientJobId)]);
+    } catch (err: any) {
+      setActiveJob((prev) =>
+        prev?.job_id === clientJobId
+          ? { ...prev, status: 'failed', error_message: err.message || 'Generation error' }
+          : null
+      );
+      setGlobalError(err.message || 'Error running browser motion synthesis');
     }
   };
 
@@ -149,7 +238,8 @@ export default function App() {
       setActiveJob(initialJob);
       subscribeToJobEvents(data.job_id);
     } catch (err: any) {
-      setGlobalError(err.message || 'Error submitting video generation job');
+      console.warn('Backend unavailable, running in-browser neural motion pipeline:', err.message);
+      await executeClientGeneration(currentImage.url, currentImage.id, settings, prompt.trim());
     } finally {
       setIsSubmitting(false);
     }
@@ -216,15 +306,16 @@ export default function App() {
 
   // 5. Delete Job
   const handleDeleteJob = async (id: string) => {
+    deleteLocalHistoryItem(id);
     try {
       await safeFetchJson(`/api/v1/generations/${id}`, { method: 'DELETE' });
-      if (activeJob?.job_id === id) {
-        setActiveJob(null);
-      }
-      fetchHistory();
-    } catch (err) {
-      console.error('Delete error:', err);
+    } catch {
+      // Ignore network failure when deleting local item
     }
+    if (activeJob?.job_id === id) {
+      setActiveJob(null);
+    }
+    fetchHistory();
   };
 
   // 6. Variation Workflow
@@ -273,7 +364,19 @@ export default function App() {
       setActiveJob(newJob);
       subscribeToJobEvents(data.job_id);
     } catch (err: any) {
-      setGlobalError(err.message || 'Error triggering variation');
+      console.warn('Backend unavailable, generating variation client-side:', err.message);
+      const targetImgUrl = currentImage?.url || variationSource?.input_image_url || '';
+      if (targetImgUrl) {
+        const variationSettings = {
+          ...settings,
+          camera_motion: params.cameraMotion,
+          motion_strength: params.motionStrength,
+          seed: params.seed,
+        };
+        await executeClientGeneration(targetImgUrl, params.imageId, variationSettings, params.prompt);
+      } else {
+        setGlobalError(err.message || 'Error triggering variation');
+      }
     } finally {
       setIsSubmitting(false);
     }

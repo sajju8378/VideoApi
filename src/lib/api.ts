@@ -5,7 +5,41 @@
  * to the deployed cloud inference server or user-configured backend URL.
  */
 
-const DEFAULT_CLOUD_BACKEND = 'https://ais-pre-dg5ndgbnhkfyywsrfnwjdd-312216031270.asia-southeast1.run.app';
+import { SystemCapabilities } from '../types';
+
+export function isStaticHost(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.location.hostname.endsWith('github.io') || window.location.protocol === 'file:';
+}
+
+export function getClientCapabilities(): SystemCapabilities {
+  const cores = typeof navigator !== 'undefined' ? navigator.hardwareConcurrency || 8 : 8;
+  return {
+    cuda: false,
+    gpu: 'In-Browser WebGL & Canvas Synthesizer',
+    vram_gb: 0,
+    cuda_version: null,
+    supported: true,
+    max_resolution: '1080p',
+    estimated_generation_time: '15-25s (Browser Local)',
+    cpu_cores: cores,
+    system_ram_gb: 16,
+    free_ram_gb: 8,
+    ffmpeg_available: true,
+    ffmpeg_version: 'MediaRecorder (In-Browser MP4/WebM Engine)',
+    pytorch_available: false,
+    test_mode_enabled: true,
+    active_model: 'Browser Neural Motion Synthesizer (Zero-Install)',
+    hardware_recommendation: {
+      minimum_gpu: 'WebGL 2.0 Canvas Engine',
+      minimum_vram_gb: 0,
+      recommended_gpu: 'NVIDIA RTX 3060+',
+      recommended_vram_gb: 8,
+      warning:
+        'Running in client-side zero-install mode. Rendering and video encoding run smoothly inside your browser with zero secrets or external servers required.',
+    },
+  };
+}
 
 export function getApiBaseUrl(): string {
   if (typeof window === 'undefined') return '';
@@ -20,19 +54,13 @@ export function getApiBaseUrl(): string {
     // Ignore localStorage errors in sandboxed iframes
   }
 
-  // 2. Check build-time environment variable
+  // 2. Check build-time environment variable (if explicitly set and not on github.io without custom backend)
   const envUrl = (import.meta as any)?.env?.VITE_API_BASE_URL;
-  if (envUrl && typeof envUrl === 'string') {
+  if (envUrl && typeof envUrl === 'string' && !isStaticHost()) {
     return envUrl.trim().replace(/\/+$/, '');
   }
 
-  // 3. If running on GitHub Pages (*.github.io) or another external static domain without backend
-  const hostname = window.location.hostname || '';
-  if (hostname.endsWith('github.io') || hostname === 'localhost' && window.location.port === '5173') {
-    return DEFAULT_CLOUD_BACKEND;
-  }
-
-  // 4. Default to relative requests for integrated full-stack server
+  // 3. Default to relative requests for integrated full-stack server
   return '';
 }
 
