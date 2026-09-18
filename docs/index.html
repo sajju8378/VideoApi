@@ -9,22 +9,27 @@
     <meta property="og:description" content="Self-hosted AI image-to-video generation platform with custom inference pipeline, queue management, and real-time video processing." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
-    <script>
-      // Fallback for static hosts (GitHub Pages) where main.tsx cannot be compiled on-the-fly
-      if (window.location.hostname.includes('github.io')) {
-        window.__IS_STATIC_HOST__ = true;
-        var script = document.createElement('script');
-        script.type = 'module';
-        script.crossOrigin = 'anonymous';
-        script.src = './assets/index-BNk0jYGb.js';
-        document.head.appendChild(script);
-      }
-    </script>
-    <script type="module" crossorigin src="./assets/index-BNk0jYGb.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-CJTfMua2.css">
+    <link rel="stylesheet" crossorigin href="./assets/app-bundle.css">
+    <script type="module" crossorigin src="./assets/app-bundle.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/app-bundle.css">
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Universal static fallback: if running on static host (e.g. GitHub Pages) where main.tsx is not compiled on-the-fly
+      if (window.location.hostname.endsWith('github.io') || window.location.protocol === 'file:') {
+        setTimeout(function() {
+          var root = document.getElementById('root');
+          if (root && (!root.firstElementChild || root.children.length === 0)) {
+            var bundleScript = document.createElement('script');
+            bundleScript.type = 'module';
+            bundleScript.crossOrigin = 'anonymous';
+            bundleScript.src = './assets/app-bundle.js';
+            document.body.appendChild(bundleScript);
+          }
+        }, 150);
+      }
+    </script>
   </body>
 </html>
 
