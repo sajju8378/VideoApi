@@ -120,18 +120,23 @@ export default function App() {
     setActiveJob(initialJob);
 
     try {
-      const result = await generateClientVideo(imgUrl, targetSettings, (progress, stage, message) => {
-        setActiveJob((prev) => {
-          if (!prev || prev.job_id !== clientJobId) return prev;
-          return {
-            ...prev,
-            status: 'generating',
-            progress,
-            stage,
-            message,
-          };
-        });
-      });
+      const result = await generateClientVideo(
+        imgUrl,
+        targetSettings,
+        (progress, stage, message) => {
+          setActiveJob((prev) => {
+            if (!prev || prev.job_id !== clientJobId) return prev;
+            return {
+              ...prev,
+              status: 'generating',
+              progress,
+              stage,
+              message,
+            };
+          });
+        },
+        targetPrompt
+      );
 
       const completedJob: ActiveJob = {
         job_id: clientJobId,

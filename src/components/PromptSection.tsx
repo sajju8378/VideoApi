@@ -21,16 +21,16 @@ export const PromptSection: React.FC<PromptSectionProps> = ({
 
   const samplePrompts = [
     {
+      title: 'Action Battle (Hanuman & Sea Creature)',
+      text: 'Hanuman flies with immense momentum through the stormy sky towards the roaring sea creature. Ocean waves crash and churn with splashing foam, while the monster lunges forward with snapping jaws as clouds roll across the horizon.',
+    },
+    {
       title: 'Charminar & Yamaha RX100',
       text: 'A young man standing beside a Yamaha RX100 near Charminar. His hair moves gently in the wind. The camera slowly pushes forward while he looks toward the camera. Natural body movement, realistic facial expression, cinematic lighting, authentic 1980s atmosphere.',
     },
     {
       title: 'Cinematic Portrait in Breeze',
       text: 'The woman gently turns toward the camera while her saree moves naturally in the breeze. Slow cinematic camera movement, realistic skin texture, warm golden hour ambient lighting.',
-    },
-    {
-      title: 'Vintage Motorcycle Stationary',
-      text: 'The vintage motorcycle remains stationary while the rider looks toward the camera. Natural environmental movement and subtle handheld camera motion.',
     },
   ];
 
@@ -60,6 +60,33 @@ export const PromptSection: React.FC<PromptSectionProps> = ({
           className="w-full rounded-xl bg-neutral-900 border border-neutral-800 p-3.5 text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 transition-colors disabled:opacity-50 resize-none leading-relaxed"
         />
       </div>
+
+      {/* Detected Dynamic Object Motion Tags */}
+      {prompt.trim() && (
+        <div className="flex items-center gap-1.5 flex-wrap text-[11px]">
+          <span className="text-neutral-500 font-medium">Detected Object Dynamics:</span>
+          {/water|sea|ocean|waves?|splash|lake|river|tsunami|foam/i.test(prompt) && (
+            <span className="px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/30 text-blue-400 font-medium">
+              🌊 Fluid Waves & Ocean Spray
+            </span>
+          )}
+          {/fl(y|ies|ying)|soar|hanuman|superman|hero|bird|glide|rush|aerial/i.test(prompt) && (
+            <span className="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-300 font-medium">
+              ⚡ Character Flight & Cape Flutter
+            </span>
+          )}
+          {/monster|dragon|serpent|snake|creature|beast|jaw|mouth|roar/i.test(prompt) && (
+            <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-medium">
+              🐉 Creature Lunging & Snapping Jaws
+            </span>
+          )}
+          {/clouds?|sky|smoke|fire|fog|mist|storm/i.test(prompt) && (
+            <span className="px-2 py-0.5 rounded-md bg-purple-500/10 border border-purple-500/30 text-purple-300 font-medium">
+              ☁️ Cloud Drift & Mist
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Preset Prompt Buttons */}
       <div className="flex items-center gap-2 flex-wrap">
