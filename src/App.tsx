@@ -21,7 +21,7 @@ import {
   HistoryItem,
   CameraMotion,
 } from './types';
-import { safeFetchJson } from './lib/api';
+import { safeFetchJson, resolveApiUrl } from './lib/api';
 
 export default function App() {
   // System & Capabilities
@@ -80,11 +80,8 @@ export default function App() {
 
   const fetchCapabilities = async () => {
     try {
-      const res = await fetch('/api/v1/system/capabilities');
-      if (res.ok) {
-        const data = await res.json();
-        setCapabilities(data);
-      }
+      const data = await safeFetchJson('/api/v1/system/capabilities');
+      setCapabilities(data);
     } catch {
       // Ignore
     }
@@ -92,11 +89,8 @@ export default function App() {
 
   const fetchHistory = async () => {
     try {
-      const res = await fetch('/api/v1/generations');
-      if (res.ok) {
-        const data = await res.json();
-        setHistoryItems(data.generations || []);
-      }
+      const data = await safeFetchJson<{ generations: HistoryItem[] }>('/api/v1/generations');
+      setHistoryItems(data.generations || []);
     } catch {
       // Ignore
     }
@@ -167,7 +161,7 @@ export default function App() {
       eventSourceRef.current.close();
     }
 
-    const sse = new EventSource(`/api/v1/video/jobs/${jobId}/events`);
+    const sse = new EventSource(resolveApiUrl(`/api/v1/video/jobs/${jobId}/events`));
     eventSourceRef.current = sse;
 
     sse.onmessage = async (e) => {
@@ -189,10 +183,11 @@ export default function App() {
         if (payload.status === 'completed') {
           sse.close();
           // Fetch complete output result
-          const jobRes = await fetch(`/api/v1/video/jobs/${jobId}`);
-          if (jobRes.ok) {
-            const jobData = await jobRes.json();
+          try {
+            const jobData = await safeFetchJson<{ output: any }>(`/api/v1/video/jobs/${jobId}`);
             setActiveJob((prev) => (prev ? { ...prev, output: jobData.output } : null));
+          } catch {
+            // Ignore
           }
           fetchHistory();
         } else if (payload.status === 'failed' || payload.status === 'cancelled') {
@@ -213,7 +208,7 @@ export default function App() {
   const handleCancelJob = async () => {
     if (!activeJob) return;
     try {
-      await fetch(`/api/v1/video/jobs/${activeJob.job_id}/cancel`, { method: 'POST' });
+      await safeFetchJson(`/api/v1/video/jobs/${activeJob.job_id}/cancel`, { method: 'POST' });
     } catch (err) {
       console.error('Cancel error:', err);
     }
@@ -222,13 +217,11 @@ export default function App() {
   // 5. Delete Job
   const handleDeleteJob = async (id: string) => {
     try {
-      const res = await fetch(`/api/v1/generations/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        if (activeJob?.job_id === id) {
-          setActiveJob(null);
-        }
-        fetchHistory();
+      await safeFetchJson(`/api/v1/generations/${id}`, { method: 'DELETE' });
+      if (activeJob?.job_id === id) {
+        setActiveJob(null);
       }
+      fetchHistory();
     } catch (err) {
       console.error('Delete error:', err);
     }

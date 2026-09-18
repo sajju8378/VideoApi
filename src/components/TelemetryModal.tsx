@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { X, Cpu, Server, HardDrive, ShieldAlert, Activity, RefreshCw } from 'lucide-react';
+import { X, Cpu, Server, HardDrive, ShieldAlert, Activity, RefreshCw, Globe, Check } from 'lucide-react';
 import { SystemCapabilities } from '../types';
-import { safeFetchJson } from '../lib/api';
+import { safeFetchJson, getApiBaseUrl, setApiBaseUrl } from '../lib/api';
 
 interface TelemetryModalProps {
   isOpen: boolean;
@@ -12,12 +12,22 @@ interface TelemetryModalProps {
 export const TelemetryModal: React.FC<TelemetryModalProps> = ({ isOpen, onClose, capabilities }) => {
   const [telemetry, setTelemetry] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [backendUrl, setBackendInput] = useState('');
+  const [savedSuccess, setSavedSuccess] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
+      setBackendInput(getApiBaseUrl());
       fetchTelemetry();
     }
   }, [isOpen]);
+
+  const handleSaveBackend = () => {
+    setApiBaseUrl(backendUrl);
+    setSavedSuccess(true);
+    setTimeout(() => setSavedSuccess(false), 2000);
+    fetchTelemetry();
+  };
 
   const fetchTelemetry = async () => {
     setIsLoading(true);
@@ -144,6 +154,51 @@ export const TelemetryModal: React.FC<TelemetryModalProps> = ({ isOpen, onClose,
             </div>
           </div>
         )}
+
+        {/* Backend API Configuration (for GitHub Pages / remote hosting) */}
+        <div className="p-4 rounded-xl bg-neutral-950 border border-neutral-800 space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs uppercase font-bold tracking-wider text-neutral-300 flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5 text-amber-400" />
+              <span>Inference Backend Endpoint</span>
+            </h4>
+            <span className="text-[11px] text-neutral-500 font-mono">
+              {backendUrl || 'Same Host (Relative)'}
+            </span>
+          </div>
+          <p className="text-xs text-neutral-400">
+            When deployed on GitHub Pages or custom static domains, specify the live backend API URL:
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={backendUrl}
+              onChange={(e) => setBackendInput(e.target.value)}
+              placeholder="https://ais-pre-...run.app"
+              className="flex-1 px-3 py-1.5 bg-neutral-900 border border-neutral-800 rounded-lg text-xs text-neutral-200 focus:outline-none focus:border-amber-500 font-mono"
+            />
+            <button
+              onClick={handleSaveBackend}
+              className="flex items-center gap-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-semibold rounded-lg text-xs transition-colors"
+            >
+              {savedSuccess ? <Check className="w-3.5 h-3.5" /> : null}
+              <span>{savedSuccess ? 'Saved' : 'Save'}</span>
+            </button>
+            {backendUrl && (
+              <button
+                onClick={() => {
+                  setBackendInput('');
+                  setApiBaseUrl('');
+                  setSavedSuccess(true);
+                  setTimeout(() => setSavedSuccess(false), 2000);
+                }}
+                className="px-2 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-400 rounded-lg text-xs"
+              >
+                Reset
+              </button>
+            )}
+          </div>
+        </div>
 
         {/* Hardware Recommendations Guide */}
         {capabilities?.hardware_recommendation && (

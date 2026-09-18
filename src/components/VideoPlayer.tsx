@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Play, Pause, Download, Copy, Trash2, Maximize2, RotateCcw, Sparkles } from 'lucide-react';
 import { ActiveJob } from '../types';
+import { resolveApiUrl } from '../lib/api';
 
 interface VideoPlayerProps {
   job: ActiveJob;
@@ -55,7 +56,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ job, onGenerateVariati
         <div className="flex items-center gap-2">
           {/* Download Button */}
           <a
-            href={job.output.video_url}
+            href={resolveApiUrl(job.output.video_url)}
             download={`ai_video_${job.job_id.slice(0, 8)}.mp4`}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 text-xs font-semibold shadow-md transition-colors"
           >
@@ -88,8 +89,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ job, onGenerateVariati
       <div className="relative rounded-xl overflow-hidden bg-black flex items-center justify-center border border-neutral-800 shadow-inner group">
         <video
           ref={videoRef}
-          src={job.output.video_url}
-          poster={job.output.thumbnail_url}
+          src={resolveApiUrl(job.output.video_url)}
+          poster={resolveApiUrl(job.output.thumbnail_url)}
           loop={isLooping}
           autoPlay
           playsInline

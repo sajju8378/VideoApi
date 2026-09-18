@@ -1,15 +1,82 @@
 /**
  * Safe API Client for AI Video Generator
  * Protects against unexpected HTML responses, server cold-starts, and syntax errors.
+ * Also seamlessly supports static hosting (like GitHub Pages) by resolving backend endpoints
+ * to the deployed cloud inference server or user-configured backend URL.
  */
+
+const DEFAULT_CLOUD_BACKEND = 'https://ais-pre-dg5ndgbnhkfyywsrfnwjdd-312216031270.asia-southeast1.run.app';
+
+export function getApiBaseUrl(): string {
+  if (typeof window === 'undefined') return '';
+
+  // 1. Check user-configured backend in localStorage
+  try {
+    const saved = localStorage.getItem('ai_video_backend_url');
+    if (saved && saved.trim()) {
+      return saved.trim().replace(/\/+$/, '');
+    }
+  } catch {
+    // Ignore localStorage errors in sandboxed iframes
+  }
+
+  // 2. Check build-time environment variable
+  const envUrl = (import.meta as any)?.env?.VITE_API_BASE_URL;
+  if (envUrl && typeof envUrl === 'string') {
+    return envUrl.trim().replace(/\/+$/, '');
+  }
+
+  // 3. If running on GitHub Pages (*.github.io) or another external static domain without backend
+  const hostname = window.location.hostname || '';
+  if (hostname.endsWith('github.io') || hostname === 'localhost' && window.location.port === '5173') {
+    return DEFAULT_CLOUD_BACKEND;
+  }
+
+  // 4. Default to relative requests for integrated full-stack server
+  return '';
+}
+
+export function setApiBaseUrl(url: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (!url || !url.trim()) {
+      localStorage.removeItem('ai_video_backend_url');
+    } else {
+      localStorage.setItem('ai_video_backend_url', url.trim().replace(/\/+$/, ''));
+    }
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export function resolveApiUrl(pathOrUrl: string): string {
+  if (!pathOrUrl) return '';
+  if (
+    pathOrUrl.startsWith('http://') ||
+    pathOrUrl.startsWith('https://') ||
+    pathOrUrl.startsWith('data:') ||
+    pathOrUrl.startsWith('blob:')
+  ) {
+    return pathOrUrl;
+  }
+
+  const base = getApiBaseUrl();
+  const cleanPath = pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`;
+  return base ? `${base}${cleanPath}` : cleanPath;
+}
 
 export async function safeFetchJson<T = any>(
   input: RequestInfo | URL,
   init?: RequestInit
 ): Promise<T> {
+  let targetUrl: RequestInfo | URL = input;
+  if (typeof input === 'string') {
+    targetUrl = resolveApiUrl(input);
+  }
+
   let res: Response;
   try {
-    res = await fetch(input, init);
+    res = await fetch(targetUrl, init);
   } catch (netErr: any) {
     throw new Error(
       netErr?.message?.includes('Failed to fetch')

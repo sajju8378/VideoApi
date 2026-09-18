@@ -1,6 +1,7 @@
 import React from 'react';
 import { Play, Download, Sparkles, Trash2, Clock, Calendar, Video } from 'lucide-react';
 import { HistoryItem } from '../types';
+import { resolveApiUrl } from '../lib/api';
 
 interface HistoryGalleryProps {
   items: HistoryItem[];
@@ -66,14 +67,14 @@ export const HistoryGallery: React.FC<HistoryGalleryProps> = ({
               >
                 {item.thumbnail_url ? (
                   <img
-                    src={item.thumbnail_url}
+                    src={resolveApiUrl(item.thumbnail_url)}
                     alt={item.prompt}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     crossOrigin="anonymous"
                   />
                 ) : item.input_image_url ? (
                   <img
-                    src={item.input_image_url}
+                    src={resolveApiUrl(item.input_image_url)}
                     alt="Source preview"
                     className="w-full h-full object-cover opacity-60"
                     crossOrigin="anonymous"
@@ -140,7 +141,7 @@ export const HistoryGallery: React.FC<HistoryGalleryProps> = ({
                   <div className="flex items-center gap-1">
                     {isCompleted && item.video_url && (
                       <a
-                        href={item.video_url}
+                        href={resolveApiUrl(item.video_url)}
                         download={`ai_video_${item.id.slice(0, 8)}.mp4`}
                         className="p-1.5 rounded hover:bg-neutral-800 text-neutral-400 hover:text-neutral-200 transition-colors"
                         title="Download Video"
