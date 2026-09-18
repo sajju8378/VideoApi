@@ -9,10 +9,26 @@
     <meta property="og:description" content="Self-hosted AI image-to-video generation platform with custom inference pipeline, queue management, and real-time video processing." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
+    <link rel="stylesheet" crossorigin href="./assets/index-CJTfMua2.css">
+    <script>
+      // Fallback for static hosts (GitHub Pages) where main.tsx cannot be compiled on-the-fly
+      if (window.location.hostname.includes('github.io')) {
+        window.__IS_STATIC_HOST__ = true;
+        var script = document.createElement('script');
+        script.type = 'module';
+        script.crossOrigin = 'anonymous';
+        script.src = './assets/index-D4uhOrhk.js';
+        document.head.appendChild(script);
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="./src/main.tsx"></script>
+    <script type="module">
+      if (!window.__IS_STATIC_HOST__) {
+        import('./src/main.tsx');
+      }
+    </script>
   </body>
 </html>
 
